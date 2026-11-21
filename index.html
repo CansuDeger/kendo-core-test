@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1">
+  <title>Kendo UI Core - VoiceOver Test</title>
+
+  <link rel="stylesheet"
+    href="https://kendo.cdn.telerik.com/themes/13.0.0/default/default-ocean-blue.css">
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://kendo.cdn.telerik.com/2026.1.212/js/kendo.ui.core.min.js"></script>
+</head>
+<body style="font-family:Arial;padding:24px">
+
+  <h1>Kendo UI Core VoiceOver Testi</h1>
+
+  <label for="city">İl seçiniz</label>
+  <input id="city" style="width:100%">
+
+  <p id="result" role="status" aria-live="polite">
+    Henüz seçim yapılmadı.
+  </p>
+
+  <script>
+
+document.addEventListener("DOMContentLoaded", function () {
+  const result = document.getElementById("result");
+
+  if (!window.jQuery) {
+    result.textContent = "Hata: jQuery yüklenemedi.";
+    return;
+  }
+
+  if (typeof jQuery.fn.kendoComboBox !== "function") {
+    result.textContent =
+      "Hata: Kendo UI Core ComboBox yüklenemedi.";
+    return;
+  }
+
+  jQuery("#city").kendoComboBox({
+    dataTextField: "text",
+    dataValueField: "value",
+    filter: "contains",
+    suggest: true,
+    placeholder: "İl ara veya seç",
+    dataSource: [
+      { text: "Adana", value: "01" },
+      { text: "Adıyaman", value: "02" },
+      { text: "Ankara", value: "06" },
+      { text: "İstanbul", value: "34" },
+      { text: "Konya", value: "42" }
+    ],
+    change: function () {
+      result.textContent =
+        "Seçilen il: " + (this.text() || "Yok");
+    }
+  });
+
+  console.log("Kendo UI Core ComboBox oluşturuldu.");
+});
+
+  </script>
+</body>
+</html>
