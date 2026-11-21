@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOV.UK Accessible Autocomplete – İl İlçe</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/accessible-autocomplete@3.0.1/dist/accessible-autocomplete.min.css">
+<style>
+*{box-sizing:border-box}body{font:16px/1.5 system-ui,Arial,sans-serif;margin:0;background:#f4f6fa;color:#172b43}main{max-width:650px;margin:0 auto;padding:24px 16px 60px}section{background:white;border:1px solid #d9e2ed;border-radius:12px;padding:20px}.field{margin:20px 0;position:relative}label{display:block;font-weight:650;margin-bottom:8px}.autocomplete__wrapper{width:100%}.autocomplete__input{width:100%;min-height:44px}.autocomplete__menu{z-index:20}.autocomplete__input:focus-visible{outline:3px solid #1368b4;outline-offset:2px}#result{background:#edf5ff;padding:12px;border-radius:6px}#state{font-size:.9rem}p{line-height:1.5}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/accessible-autocomplete@3.0.1/dist/accessible-autocomplete.min.js"></script>
+</head>
+<body>
+<main>
+<h1>GOV.UK – Bağımlı İl / İlçe</h1>
+<p>Arama kutusuna yazabilir veya ok simgesine dokunarak tüm seçenekleri açabilirsiniz.</p>
+<section>
+<div class="field"><label for="city">İl seçiniz</label><div id="city-container"></div></div>
+<div class="field"><label for="district">İlçe seçiniz</label><div id="district-container"></div></div>
+<p id="result" role="status" aria-live="polite">Henüz seçim yapılmadı.</p>
+<p id="state">Yükleniyor…</p>
+</section>
+</main>
+<script>
+(function(){
+'use strict';
+const DATA=[
+{value:'01',label:'Adana',districts:['Çukurova','Seyhan','Yüreğir']},
+{value:'06',label:'Ankara',districts:['Çankaya','Keçiören','Mamak','Yenimahalle']},
+{value:'07',label:'Antalya',districts:['Alanya','Konyaaltı','Muratpaşa']},
+{value:'16',label:'Bursa',districts:['Nilüfer','Osmangazi','Yıldırım']},
+{value:'34',label:'İstanbul',districts:['Beşiktaş','Kadıköy','Şişli','Üsküdar']},
+{value:'35',label:'İzmir',districts:['Bornova','Buca','Karşıyaka','Konak']},
+{value:'42',label:'Konya',districts:['Karatay','Meram','Selçuklu']},
+{value:'55',label:'Samsun',districts:['Atakum','Canik','İlkadım']}
+];
+const byId=id=>document.getElementById(id);
+const norm=s=>String(s||'').toLocaleLowerCase('tr-TR');
+let selectedCity='',selectedDistrict='';
+function report(){byId('result').textContent=selectedCity?'Seçilen il: '+selectedCity+' · İlçe: '+(selectedDistrict||'Henüz seçilmedi'):'Henüz seçim yapılmadı.';}
+function optionsForCity(){return DATA.find(x=>x.label===selectedCity)?.districts||[];}
+function filter(items,query,callback){callback(items.filter(x=>norm(x).includes(norm(query))));}
+try {
+ if(typeof window.accessibleAutocomplete!=='function')throw Error('GOV.UK kütüphanesi yüklenemedi.');
+ accessibleAutocomplete({
+  element:byId('city-container'), id:'city',
+  source:(query,callback)=>filter(DATA.map(x=>x.label),query,callback),
+  minLength:0, showAllValues:true, autoselect:false, confirmOnBlur:false,
+  onConfirm:value=>{
+   const found=DATA.find(x=>x.label===value);
+   selectedCity=found?found.label:'';
+   selectedDistrict='';
+   const districtInput=byId('district');
+   if(districtInput){districtInput.value='';districtInput.dispatchEvent(new Event('input',{bubbles:true}));}
+   report();
+  },
+  tNoResults:()=> 'Sonuç bulunamadı',
+  tStatusNoResults:()=> 'Sonuç bulunamadı',
+  tStatusSelectedOption:(option,length,index)=>`${option}, ${index+1} / ${length}`,
+  tAssistiveHint:()=> 'Seçenekleri incelemek için aşağı ve yukarı ok tuşlarını kullanın. Enter ile seçin.'
+ });
+ accessibleAutocomplete({
+  element:byId('district-container'), id:'district',
+  source:(query,callback)=>filter(optionsForCity(),query,callback),
+  minLength:0, showAllValues:true, autoselect:false, confirmOnBlur:false,
+  onConfirm:value=>{
+   selectedDistrict=optionsForCity().includes(value)?value:'';
+   report();
+  },
+  tNoResults:()=>selectedCity?'Sonuç bulunamadı':'Önce il seçiniz',
+  tStatusNoResults:()=>selectedCity?'Sonuç bulunamadı':'Önce il seçiniz',
+  tStatusSelectedOption:(option,length,index)=>`${option}, ${index+1} / ${length}`,
+  tAssistiveHint:()=> 'Önce il seçin. Sonra ilçe arayabilir veya seçenekleri açabilirsiniz.'
+ });
+ byId('state').textContent='Bileşenler hazır. VoiceOver ile seçenekleri ayrıca test edin.';
+}catch(e){byId('state').textContent='Hata: '+e.message;console.error(e);}
+})();
+</script>
+</body>
+</html>
