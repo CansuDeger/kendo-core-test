@@ -3,107 +3,90 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kendo UI Core - VoiceOver İl İlçe Testi</title>
+  <title>Kendo UI Core - İki Bağımsız ComboBox VoiceOver Testi</title>
   <link rel="stylesheet" href="https://kendo.cdn.telerik.com/themes/13.0.0/default/default-ocean-blue.css">
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px 16px; }
-    h1 { font-size: 1.5rem; }
-    .field { margin: 22px 0; }
-    label { display: block; font-weight: bold; margin-bottom: 8px; }
-    .k-combobox { width: 100%; }
-    .hint { font-size: 0.9rem; color: #444; }
-    #result { padding: 12px; background: #eef4ff; border-radius: 6px; }
-    #debug { font-size: 0.9rem; }
-  </style>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://kendo.cdn.telerik.com/2026.1.212/js/kendo.ui.core.min.js"></script>
 </head>
-<body>
-  <main>
-    <h1>Kendo UI Core - İl / İlçe VoiceOver Testi</h1>
-    <p class="hint">Önce il seçin, ardından ilçe listesini açın. VoiceOver ile seçenekleri okuyup seçmeyi deneyin.</p>
-    <div class="field">
-      <label for="city">İl seçiniz</label>
-      <input id="city" autocomplete="off">
-    </div>
-    <div class="field">
-      <label for="district">İlçe seçiniz</label>
-      <input id="district" autocomplete="off">
-      <p class="hint" id="district-help">İl seçmeden önce ilçe listesi boştur.</p>
-    </div>
-    <p id="result" role="status" aria-live="polite" aria-atomic="true">Henüz seçim yapılmadı.</p>
-    <p id="debug">Yükleniyor...</p>
-  </main>
+<body style="font-family:Arial,sans-serif;padding:24px;max-width:650px;margin:auto">
+  <h1>Kendo UI Core VoiceOver Testi</h1>
+  <p>Bu testte il ve ilçe alanları birbirinden bağımsızdır. İl seçimi ilçeleri değiştirmez.</p>
+
+  <div style="margin-bottom:24px">
+    <label for="city" style="display:block;margin-bottom:8px">İl seçiniz</label>
+    <input id="city" style="width:100%">
+  </div>
+
+  <div style="margin-bottom:24px">
+    <label for="district" style="display:block;margin-bottom:8px">İlçe seçiniz</label>
+    <input id="district" style="width:100%">
+  </div>
+
+  <p id="result" role="status" aria-live="polite">Henüz seçim yapılmadı.</p>
+  <p id="load-status">Yükleniyor…</p>
+
   <script>
-    $(function () {
-      const result = document.getElementById('result');
-      const debug = document.getElementById('debug');
-      if (typeof $.fn.kendoComboBox !== 'function') {
-        debug.textContent = 'Hata: Kendo UI Core yüklenemedi.';
+    document.addEventListener("DOMContentLoaded", function () {
+      const result = document.getElementById("result");
+      const loadStatus = document.getElementById("load-status");
+
+      if (!window.jQuery) {
+        loadStatus.textContent = "Hata: jQuery yüklenemedi.";
+        return;
+      }
+      if (typeof jQuery.fn.kendoComboBox !== "function") {
+        loadStatus.textContent = "Hata: Kendo UI Core ComboBox yüklenemedi.";
         return;
       }
 
-      const provinces = [
-        { text: 'Adana', value: '01', districts: ['Çukurova', 'Seyhan', 'Yüreğir'] },
-        { text: 'Ankara', value: '06', districts: ['Çankaya', 'Keçiören', 'Mamak', 'Yenimahalle'] },
-        { text: 'Antalya', value: '07', districts: ['Alanya', 'Konyaaltı', 'Muratpaşa'] },
-        { text: 'Bursa', value: '16', districts: ['Nilüfer', 'Osmangazi', 'Yıldırım'] },
-        { text: 'İstanbul', value: '34', districts: ['Beşiktaş', 'Kadıköy', 'Şişli', 'Üsküdar'] },
-        { text: 'İzmir', value: '35', districts: ['Bornova', 'Buca', 'Karşıyaka', 'Konak'] },
-        { text: 'Konya', value: '42', districts: ['Karatay', 'Meram', 'Selçuklu'] }
-      ];
+      try {
+        // İlk çalışan örnekteki yapılandırma aynen korunuyor.
+        jQuery("#city").kendoComboBox({
+          dataTextField: "text",
+          dataValueField: "value",
+          filter: "contains",
+          suggest: true,
+          placeholder: "İl ara veya seç",
+          dataSource: [
+            { text: "Adana", value: "01" },
+            { text: "Adıyaman", value: "02" },
+            { text: "Ankara", value: "06" },
+            { text: "İstanbul", value: "34" },
+            { text: "Konya", value: "42" }
+          ],
+          change: updateResult
+        });
 
-      let selectedProvince = null;
-      let selectedDistrict = '';
+        // Tek fark: ikinci, bağımsız bir ComboBox ekleniyor.
+        jQuery("#district").kendoComboBox({
+          dataTextField: "text",
+          dataValueField: "value",
+          filter: "contains",
+          suggest: true,
+          placeholder: "İlçe ara veya seç",
+          dataSource: [
+            { text: "Çankaya", value: "cankaya" },
+            { text: "Keçiören", value: "kecioren" },
+            { text: "Kadıköy", value: "kadikoy" },
+            { text: "Şişli", value: "sisli" },
+            { text: "Selçuklu", value: "selcuklu" }
+          ],
+          change: updateResult
+        });
 
-      function showResult() {
-        result.textContent = selectedProvince
-          ? 'Seçilen il: ' + selectedProvince.text + '. İlçe: ' + (selectedDistrict || 'Henüz seçilmedi') + '.'
-          : 'Henüz seçim yapılmadı.';
+        function updateResult() {
+          const city = jQuery("#city").data("kendoComboBox");
+          const district = jQuery("#district").data("kendoComboBox");
+          result.textContent = "Seçilen il: " + (city.text() || "Yok") +
+            " | Seçilen ilçe: " + (district.text() || "Yok");
+        }
+
+        loadStatus.textContent = "Her iki ComboBox hazır.";
+        console.log("İki bağımsız Kendo UI Core ComboBox oluşturuldu.");
+      } catch (error) {
+        loadStatus.textContent = "Başlatma hatası: " + error.message;
+        console.error(error);
       }
-
-      // İlçe ComboBox'ını bir kez oluşturuyoruz; DOM bileşenini yeniden yaratmıyoruz.
-      $('#district').kendoComboBox({
-        dataTextField: 'text',
-        dataValueField: 'value',
-        filter: 'contains',
-        suggest: true,
-        placeholder: 'Önce il seçiniz',
-        dataSource: [],
-        change: function () {
-          const value = this.value();
-          const valid = selectedProvince && selectedProvince.districts.includes(value);
-          selectedDistrict = valid ? value : '';
-          if (!valid) this.value('');
-          showResult();
-        }
-      });
-      const district = $('#district').data('kendoComboBox');
-
-      $('#city').kendoComboBox({
-        dataTextField: 'text',
-        dataValueField: 'value',
-        filter: 'contains',
-        suggest: true,
-        placeholder: 'İl ara veya seç',
-        dataSource: provinces,
-        change: function () {
-          // Serbest yazılan metin değil, geçerli seçilmiş il kodu kabul edilir.
-          selectedProvince = provinces.find(p => p.value === this.value()) || null;
-          selectedDistrict = '';
-
-          // Var olan ilçe widget'ının yalnızca verisini değiştiriyoruz.
-          district.value('');
-          const items = selectedProvince
-            ? selectedProvince.districts.map(name => ({ text: name, value: name }))
-            : [];
-          district.dataSource.data(items);
-          district.setOptions({ placeholder: selectedProvince ? 'İlçe ara veya seç' : 'Önce il seçiniz' });
-          showResult();
-        }
-      });
-
-      debug.textContent = 'Hazır. İl ve ilçe alanlarını VoiceOver ile test edin.';
     });
   </script>
 </body>
