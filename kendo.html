@@ -1,57 +1,27 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <title>Kendo UI Core - VoiceOver Testi</title>
-
-  <link rel="stylesheet"
-    href="https://kendo.cdn.telerik.com/themes/13.0.0/default/default-ocean-blue.css">
-
+  <title>Kendo UI Core - Bağımlı İl İlçe VoiceOver Testi</title>
+  <link rel="stylesheet" href="https://kendo.cdn.telerik.com/themes/13.0.0/default/default-ocean-blue.css">
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://kendo.cdn.telerik.com/2026.1.212/js/kendo.ui.core.min.js"></script>
-
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 650px;
-      margin: 0 auto;
-      padding: 24px;
-      line-height: 1.5;
-    }
-
-    .field {
-      margin: 24px 0;
-      position: relative;
-    }
-
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    input {
-      width: 100%;
-    }
-
-    #result {
-      background: #edf5ff;
-      padding: 12px;
-      border-radius: 6px;
-    }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 24px; line-height: 1.5; }
+    .field { margin: 24px 0; position: relative; }
+    label { display: block; font-weight: 600; margin-bottom: 8px; }
+    .field input { width: 100%; }
+    #result { background: #edf5ff; padding: 12px; border-radius: 6px; }
+    .help { color: #45556a; font-size: .95rem; }
+    .k-combobox { width: 100%; }
   </style>
 </head>
-
 <body>
   <main>
-    <h1>Kendo UI Core - VoiceOver Testi</h1>
-
-    <p>
-      Bu testte il ve ilçe alanları birbirinden bağımsızdır.
-    </p>
+    <h1>Kendo UI Core - Bağımlı İl / İlçe</h1>
+    <p>VoiceOver testi: Önce il seçin, ardından o ile bağlı ilçeyi seçin.</p>
 
     <div class="field" id="city-container">
       <label for="city">İl seçiniz</label>
@@ -61,88 +31,105 @@
     <div class="field" id="district-container">
       <label for="district">İlçe seçiniz</label>
       <input id="district" autocomplete="off">
+      <p class="help" id="district-help">Önce il seçiniz. İlçe listesi başlangıçta boştur.</p>
     </div>
 
-    <p id="result" role="status" aria-live="polite">
-      Henüz seçim .
-    </p>
-
+    <p id="result" role="status" aria-live="polite">Henüz seçim yapılmadı.</p>
     <p id="load-status">Yükleniyor…</p>
   </main>
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-
       const result = document.getElementById("result");
       const loadStatus = document.getElementById("load-status");
+      const help = document.getElementById("district-help");
 
-      if (!window.jQuery ||
-          typeof jQuery.fn.kendoComboBox !== "function") {
+      if (!window.jQuery || typeof jQuery.fn.kendoComboBox !== "function") {
         loadStatus.textContent = "Kendo UI Core yüklenemedi.";
         return;
       }
 
+      // Test amaçlı örnek veriler; Türkiye'nin tüm il ve ilçelerini kapsamaz.
+      const cities = [
+        { text: "Adana", value: "01" },
+        { text: "Adıyaman", value: "02" },
+        { text: "Ankara", value: "06" },
+        { text: "İstanbul", value: "34" },
+        { text: "Konya", value: "42" }
+      ];
+      const districtsByCity = {
+        "01": ["Çukurova", "Seyhan", "Yüreğir"],
+        "02": ["Besni", "Gölbaşı", "Kahta", "Merkez"],
+        "06": ["Çankaya", "Keçiören", "Mamak", "Yenimahalle"],
+        "34": ["Beşiktaş", "Kadıköy", "Şişli", "Üsküdar"],
+        "42": ["Karatay", "Meram", "Selçuklu"]
+      };
+
       try {
-        $("#city").kendoComboBox({
+        let selectedCityValue = "";
+        const city = jQuery("#city").kendoComboBox({
           dataTextField: "text",
           dataValueField: "value",
           filter: "contains",
           suggest: true,
           placeholder: "İl ara veya seç",
+          popup: { appendTo: jQuery("#city-container") },
+          dataSource: cities,
+          change: onCityChange
+        }).data("kendoComboBox");
 
-          popup: {
-            appendTo: $("#city-container")
-          },
-
-          dataSource: [
-            { text: "Adana", value: "01" },
-            { text: "Adıyaman", value: "02" },
-            { text: "Ankara", value: "06" },
-            { text: "İstanbul", value: "34" },
-            { text: "Konya", value: "42" }
-          ],
-
-          change: updateResult
-        });
-
-        $("#district").kendoComboBox({
+        const district = jQuery("#district").kendoComboBox({
           dataTextField: "text",
           dataValueField: "value",
           filter: "contains",
           suggest: true,
-          placeholder: "İlçe ara veya seç",
-
-          popup: {
-            appendTo: $("#district-container")
-          },
-
-          dataSource: [
-            { text: "Çankaya", value: "cankaya" },
-            { text: "Keçiören", value: "kecioren" },
-            { text: "Kadıköy", value: "kadikoy" },
-            { text: "Şişli", value: "sisli" },
-            { text: "Selçuklu", value: "selcuklu" }
-          ],
-
+          placeholder: "Önce il seçin",
+          popup: { appendTo: jQuery("#district-container") },
+          dataSource: [],
           change: updateResult
-        });
+        }).data("kendoComboBox");
 
-        function updateResult() {
-          const city = $("#city").data("kendoComboBox");
-          const district = $("#district").data("kendoComboBox");
-
-          result.textContent =
-            "Seçilen il: " + (city.text() || "Yok") +
-            " | Seçilen ilçe: " + (district.text() || "Yok");
+        function getValidCity() {
+          const item = city.dataItem();
+          if (item && item.value === city.value()) return item;
+          return cities.find(function (entry) {
+            return entry.value === city.value() && entry.text === city.text();
+          }) || null;
         }
 
-        loadStatus.textContent =
-          "Her iki ComboBox hazır.";
+        function onCityChange() {
+          const item = getValidCity();
+          const nextCityValue = item ? item.value : "";
 
+          // İl değişmediyse ilçeyi yeniden oluşturma; gereksiz DOM değişimini önle.
+          if (nextCityValue !== selectedCityValue) {
+            selectedCityValue = nextCityValue;
+            district.value("");
+            const names = districtsByCity[selectedCityValue] || [];
+            const items = names.map(function (name) { return { text: name, value: name }; });
+            district.dataSource.data(items);
+            district.value("");
+            district.setOptions({ placeholder: selectedCityValue ? "İlçe ara veya seç" : "Önce il seçin" });
+            help.textContent = selectedCityValue
+              ? "Seçilen ile ait " + items.length + " ilçe listelendi."
+              : "Önce listeden geçerli bir il seçiniz.";
+          }
+          updateResult();
+        }
+
+        function updateResult() {
+          const cityItem = getValidCity();
+          const districtItem = district.dataItem();
+          const districtText = districtItem && districtItem.value === district.value()
+            ? districtItem.text : "Henüz seçilmedi";
+          result.textContent = cityItem
+            ? "Seçilen il: " + cityItem.text + " | İlçe: " + districtText
+            : "Henüz geçerli bir il seçilmedi.";
+        }
+
+        loadStatus.textContent = "Her iki ComboBox hazır. İl seçerek başlayabilirsiniz.";
       } catch (error) {
-        loadStatus.textContent =
-          "Başlatma hatası: " + error.message;
-
+        loadStatus.textContent = "Başlatma hatası: " + error.message;
         console.error(error);
       }
     });
