@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GOV.UK Accessible Autocomplete — İl İlçe VoiceOver Testi</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/accessible-autocomplete@2.0.4/dist/accessible-autocomplete.min.css">
+<style>
+*{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,Arial,sans-serif;background:#f4f6fa;color:#172b43;margin:0}main{max-width:680px;margin:auto;padding:24px 16px 70px}section{background:white;border:1px solid #d9e2ed;border-radius:12px;padding:20px}.field{margin:20px 0;position:relative}label{display:block;font-weight:650;margin-bottom:7px}.autocomplete__wrapper{width:100%}.autocomplete__input{width:100%;min-height:44px;font:inherit}.autocomplete__menu{z-index:30}select{width:100%;min-height:44px;font:inherit}input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid #1368b4;outline-offset:2px}#result{background:#edf5ff;padding:12px;border-radius:6px}#state{font-size:.9rem}p{line-height:1.55}.hint{color:#43536b;font-size:.9rem}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/accessible-autocomplete@2.0.4/dist/accessible-autocomplete.min.js"></script>
+</head>
+<body><main>
+<h1>GOV.UK Accessible Autocomplete</h1>
+<p>Gerçek <strong>alphagov/accessible-autocomplete</strong> kütüphanesiyle bağımlı il–ilçe testi. Arama kutusuna yazarak filtreleyebilir veya listeyi açabilirsin.</p>
+<section>
+<div class="field" id="city-field"><label for="city">İl seçiniz</label><select id="city" name="city"><option value="">İl seçiniz</option></select></div>
+<div class="field" id="district-field"><label for="district">İlçe seçiniz</label><select id="district" name="district"><option value="">Önce il seçiniz</option></select></div>
+<p class="hint" id="help">Arama yapmak için yazın. Seçenekler açıldığında dokunarak keşfedin veya VoiceOver kaydırma hareketini deneyin.</p>
+<p id="result" role="status" aria-live="polite">Henüz seçim yapılmadı.</p>
+<p id="state">Yükleniyor…</p>
+</section>
+<p class="hint">Test: Ankara → Çankaya, ardından İstanbul → Şişli. İl değiştiğinde ilçe seçimi sıfırlanmalıdır. Kütüphane açılır listesinin VoiceOver ile okunması cihazda ayrıca doğrulanmalıdır.</p>
+</main>
+<script>
+(function(){'use strict';
+const DATA=[{value:'01',label:'Adana',districts:['Çukurova','Seyhan','Yüreğir']},{value:'06',label:'Ankara',districts:['Çankaya','Keçiören','Mamak','Yenimahalle']},{value:'07',label:'Antalya',districts:['Alanya','Konyaaltı','Muratpaşa']},{value:'16',label:'Bursa',districts:['Nilüfer','Osmangazi','Yıldırım']},{value:'34',label:'İstanbul',districts:['Beşiktaş','Kadıköy','Şişli','Üsküdar']},{value:'35',label:'İzmir',districts:['Bornova','Buca','Karşıyaka','Konak']},{value:'42',label:'Konya',districts:['Karatay','Meram','Selçuklu']},{value:'55',label:'Samsun',districts:['Atakum','Canik','İlkadım']}];
+const citySelect=document.getElementById('city'),districtSelect=document.getElementById('district'),result=document.getElementById('result'),state=document.getElementById('state');
+const normalize=s=>String(s||'').toLocaleLowerCase('tr-TR');
+let city='',district='',districtInstance=0;
+function fill(select,entries,placeholder){select.replaceChildren(new Option(placeholder,''));for(const entry of entries)select.add(new Option(entry.label,entry.value));select.value='';}
+function report(){result.textContent=city?'Seçilen il: '+city+' · İlçe: '+(district||'Henüz seçilmedi'):'Henüz seçim yapılmadı.';}
+function createDistrictAutocomplete(){
+ // Rebuild only the district widget on city change: the library's select enhancement
+ // captures option values when initialized, so changing hidden select alone is insufficient.
+ const field=document.getElementById('district-field');
+ const oldInput=field.querySelector('.autocomplete__input');
+ if(oldInput){const wrapper=field.querySelector('.autocomplete__wrapper');if(wrapper)wrapper.remove();}
+ const oldHidden=field.querySelector('select');
+ // The enhancer renames the original select to district-select.
+ oldHidden.id='district';
+ accessibleAutocomplete.enhanceSelectElement({
+   selectElement:oldHidden,defaultValue:'',showAllValues:true,autoselect:false,
+   confirmOnBlur:false,displayMenu:'inline',minLength:0,
+   onConfirm:function(value){
+     const current=DATA.find(x=>x.label===city);
+     district=current&&current.districts.includes(value)?value:'';
+     report();
+   }
+ });
+ districtInstance++;
+}
+try{
+ if(typeof window.accessibleAutocomplete!=='function'||typeof accessibleAutocomplete.enhanceSelectElement!=='function')throw Error('GOV.UK kütüphanesi yüklenemedi');
+ fill(citySelect,DATA.map(x=>({label:x.label,value:x.value})),'İl seçiniz');
+ accessibleAutocomplete.enhanceSelectElement({
+   selectElement:citySelect,defaultValue:'',showAllValues:true,autoselect:false,
+   confirmOnBlur:false,displayMenu:'inline',minLength:0,
+   onConfirm:function(value){
+     const selected=DATA.find(x=>x.label===value);
+     const nextCity=selected?selected.label:'';
+     if(nextCity===city)return;
+     city=nextCity;district='';
+     const districts=selected?selected.districts.map(x=>({label:x,value:x})):[];
+     // Recreate the select from scratch to avoid stale options and widget state.
+     const field=document.getElementById('district-field');
+     field.querySelectorAll('.autocomplete__wrapper').forEach(x=>x.remove());
+     const old=field.querySelector('select');if(old)old.remove();
+     const select=document.createElement('select');select.id='district';select.name='district';
+     field.appendChild(select);
+     fill(select,districts,selected?'İlçe seçiniz':'Önce il seçiniz');
+     createDistrictAutocomplete();report();
+   }
+ });
+ createDistrictAutocomplete();report();
+ state.textContent='GOV.UK otomatik tamamlama bileşenleri hazır.';
+}catch(err){state.textContent='Hata: '+err.message;console.error(err);}
+})();
+</script>
+</body></html>
