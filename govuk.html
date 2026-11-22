@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GOV.UK - Bağımlı İl İlçe VoiceOver Testi</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/accessible-autocomplete@3.0.1/dist/accessible-autocomplete.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { font: 16px/1.5 Arial, sans-serif; max-width: 650px; margin: auto; padding: 24px; }
+    .field { margin: 24px 0; }
+    label { display: block; font-weight: 700; margin-bottom: 8px; }
+    .autocomplete__wrapper { width: 100%; }
+    #result { padding: 14px; background: #eef5ff; border-radius: 6px; }
+    a { color: #075db3; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/accessible-autocomplete@3.0.1/dist/accessible-autocomplete.min.js"></script>
+</head>
+<body>
+  <nav aria-label="Test sayfaları"><a href="index.html">← Karşılaştırma sayfası</a></nav>
+  <main>
+    <h1>GOV.UK Accessible Autocomplete</h1>
+    <p>Aranabilir, bağımlı il–ilçe seçimi. Bileşenler yalnızca bir kez oluşturulur.</p>
+    <div class="field"><label for="city">İl seçiniz</label><div id="city-container"></div></div>
+    <div class="field"><label for="district">İlçe seçiniz</label><div id="district-container"></div></div>
+    <p id="result" role="status" aria-live="polite">Henüz seçim yapılmadı.</p>
+    <p id="state">Yükleniyor…</p>
+  </main>
+  <script>
+    const DATA = [
+      { label: "Adana", districts: ["Çukurova", "Seyhan", "Yüreğir"] },
+      { label: "Ankara", districts: ["Çankaya", "Keçiören", "Mamak", "Yenimahalle"] },
+      { label: "İstanbul", districts: ["Beşiktaş", "Kadıköy", "Şişli", "Üsküdar"] },
+      { label: "İzmir", districts: ["Bornova", "Buca", "Karşıyaka", "Konak"] },
+      { label: "Konya", districts: ["Karatay", "Meram", "Selçuklu"] }
+    ];
+    let selectedCity = "";
+    let selectedDistrict = "";
+    const result = document.getElementById("result");
+    const state = document.getElementById("state");
+
+    function normalize(text) {
+      return String(text || "").toLocaleLowerCase("tr-TR");
+    }
+    function getDistricts() {
+      const city = DATA.find(item => item.label === selectedCity);
+      return city ? city.districts : [];
+    }
+    function updateResult() {
+      result.textContent = selectedCity
+        ? "Seçilen il: " + selectedCity + " | İlçe: " + (selectedDistrict || "Seçilmedi")
+        : "Henüz seçim yapılmadı.";
+    }
+
+    try {
+      if (typeof accessibleAutocomplete !== "function") {
+        throw new Error("GOV.UK kütüphanesi yüklenemedi.");
+      }
+
+      accessibleAutocomplete({
+        element: document.querySelector("#city-container"),
+        id: "city",
+        source: DATA.map(item => item.label),
+        showAllValues: true,
+        minLength: 0,
+        autoselect: false,
+        confirmOnBlur: false,
+        onConfirm: function(value) {
+          const found = DATA.find(item => item.label === value);
+          const newCity = found ? found.label : "";
+          if (newCity !== selectedCity) {
+            selectedCity = newCity;
+            selectedDistrict = "";
+            const districtInput = document.getElementById("district");
+            if (districtInput) {
+              districtInput.value = "";
+              districtInput.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+          }
+          updateResult();
+        }
+      });
+
+      accessibleAutocomplete({
+        element: document.querySelector("#district-container"),
+        id: "district",
+        showAllValues: true,
+        minLength: 0,
+        autoselect: false,
+        confirmOnBlur: false,
+        source: function(query, populateResults) {
+          const filtered = getDistricts().filter(item =>
+            normalize(item).includes(normalize(query))
+          );
+          populateResults(filtered);
+        },
+        onConfirm: function(value) {
+          selectedDistrict = getDistricts().includes(value) ? value : "";
+          updateResult();
+        }
+      });
+      state.textContent = "İki ComboBox oluşturuldu.";
+    } catch (error) {
+      state.textContent = "Hata: " + error.message;
+      console.error(error);
+    }
+  </script>
+</body>
+</html>
